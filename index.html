@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16181d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="一萬下">
+<title>壺鈴一萬下挑戰</title>
+<style>
+  :root {
+    --bg: #16181d; --card: #20232b; --line: #2e323c; --text: #eef0f4; --muted: #9aa1ae;
+    --swing: #f2a03d; --strength: #4fb3d9; --rest: #7bc47f; --danger: #e5686b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; }
+  body { padding: env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 16px 0 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .big { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bar { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; margin: 10px 0 6px; }
+  .bar > div { height: 100%; background: var(--swing); border-radius: 99px; transition: width .3s; }
+  .dots { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; margin-top: 10px; }
+  .dot { aspect-ratio: 1; border-radius: 50%; background: var(--line); display: grid; place-items: center; font-size: 11px; color: var(--muted); }
+  .dot.done { background: var(--swing); color: #1b1300; font-weight: 700; }
+  button { font: inherit; border: none; border-radius: 14px; padding: 14px; cursor: pointer; color: var(--text); background: var(--line); }
+  button:active { transform: scale(.98); }
+  .primary { background: var(--swing); color: #1b1300; font-weight: 700; font-size: 20px; width: 100%; padding: 22px; }
+  .wide { width: 100%; }
+  .btns { display: flex; gap: 10px; margin-top: 10px; }
+  .btns > button { flex: 1; }
+  .step-now { text-align: center; padding: 10px 0 4px; }
+  .step-label { font-size: 15px; color: var(--muted); }
+  .step-main { font-size: 44px; font-weight: 800; margin: 6px 0; }
+  .step-sub { font-size: 20px; font-weight: 600; }
+  .swing { color: var(--swing); } .strength { color: var(--strength); } .rest { color: var(--rest); }
+  .timer { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; margin: 8px 0; }
+  .rounds { display: flex; gap: 6px; justify-content: center; margin: 8px 0; }
+  .rounds span { width: 34px; height: 8px; border-radius: 99px; background: var(--line); }
+  .rounds span.on { background: var(--swing); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 4px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  th { color: var(--muted); font-weight: 500; }
+  textarea { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px; min-height: 70px; }
+  .hidden { display: none; }
+  .danger { color: var(--danger); background: transparent; border: 1px solid var(--line); }
+  .plan li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<h1>壺鈴一萬下挑戰 <span class="muted">Dan John 10,000 Swings</span></h1>
+
+<!-- 總進度 -->
+<div class="card" id="overview">
+  <div class="row"><span class="muted">累計擺盪</span><span class="muted" id="pct"></span></div>
+  <div class="row"><span class="big" id="total">0</span><span class="muted">/ 10,000 下</span></div>
+  <div class="bar"><div id="bar" style="width:0%"></div></div>
+  <div class="row muted"><span id="sessionsText"></span><span id="kgText"></span></div>
+  <div class="dots" id="dots"></div>
+</div>
+
+<!-- 開始畫面 -->
+<div class="card" id="startCard">
+  <div class="muted">下一次：第 <b id="nextNo"></b> 次</div>
+  <div style="font-size:18px;margin:8px 0 4px">擺盪 <b class="swing">20kg</b> × 500 下</div>
+  <div style="font-size:18px;margin-bottom:12px">肌力動作：<b class="strength" id="nextStrength"></b></div>
+  <ol class="plan muted">
+    <li>擺盪 10 下 → 肌力 1 下</li>
+    <li>擺盪 15 下 → 肌力 2 下</li>
+    <li>擺盪 25 下 → 肌力 3 下</li>
+    <li>擺盪 50 下 → 休息</li>
+  </ol>
+  <div class="muted" style="margin-bottom:12px">以上算 1 輪，做 5 輪。</div>
+  <button class="primary" id="startBtn">開始訓練</button>
+</div>
+
+<!-- 訓練中 -->
+<div class="card hidden" id="workCard">
+  <div class="row muted"><span id="workTitle"></span><span id="workCount"></span></div>
+  <div class="rounds" id="rounds"></div>
+  <div class="step-now">
+    <div class="step-label" id="stepLabel"></div>
+    <div class="step-main swing" id="stepSwing"></div>
+    <div class="step-sub" id="stepAfter"></div>
+  </div>
+  <div class="timer" id="timer">00:00</div>
+  <button class="primary" id="doneStepBtn">完成這一步</button>
+  <div class="btns">
+    <button id="undoBtn">上一步</button>
+    <button id="pauseBtn">暫停</button>
+    <button class="danger" id="quitBtn">放棄這次</button>
+  </div>
+</div>
+
+<!-- 完成畫面 -->
+<div class="card hidden" id="finishCard">
+  <div style="font-size:22px;font-weight:700">完成 500 下 🎉</div>
+  <div class="muted" id="finishInfo" style="margin:6px 0 12px"></div>
+  <div class="muted" style="margin-bottom:6px">備註（身體感覺、哪裡緊，可不填）</div>
+  <textarea id="note"></textarea>
+  <button class="primary" id="saveBtn" style="margin-top:12px">存檔</button>
+</div>
+
+<!-- 紀錄 -->
+<div class="card" id="logCard">
+  <div class="row" style="margin-bottom:6px"><b>紀錄</b><span class="muted" id="avgText"></span></div>
+  <table>
+    <thead><tr><th>#</th><th>日期</th><th>肌力</th><th>時間</th></tr></thead>
+    <tbody id="logBody"></tbody>
+  </table>
+  <div class="btns">
+    <button id="csvBtn">匯出 CSV</button>
+    <button class="danger" id="delLastBtn">刪除最後一筆</button>
+  </div>
+  <div class="muted" style="margin-top:10px">資料只存在這支手機的瀏覽器裡。清除 Safari 網站資料會一起清掉，建議定期匯出 CSV 備份。</div>
+</div>
+
+<script>
+// ===== 固定設定（之後要改就改這裡）=====
+const SWING_KG = 20;
+const TOTAL_SESSIONS = 20;
+const SWINGS_PER_SESSION = 500;
+const STRENGTH = [
+  { name: '單手推舉 16kg', unit: '左右各' },
+  { name: '高腳杯深蹲 20kg', unit: '' }
+];
+const LADDER = [ // 一輪
+  { swings: 10, reps: 1 },
+  { swings: 15, reps: 2 },
+  { swings: 25, reps: 3 },
+  { swings: 50, reps: 0 } // 0 = 休息
+];
+const ROUNDS = 5;
+const STEPS = [];
+for (let r = 0; r < ROUNDS; r++) LADDER.forEach((s, i) => STEPS.push({ round: r + 1, idx: i + 1, ...s }));
+
+// ===== 資料存取 =====
+const KEY = 'kb10k_v1';
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || { sessions: [], current: null }; }
+  catch (e) { return { sessions: [], current: null }; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch (e) { alert('存檔失敗：' + e.message); }
+}
+let state = load();
+
+const $ = id => document.getElementById(id);
+const fmt = sec => { sec = Math.max(0, Math.round(sec)); const m = Math.floor(sec / 60), s = sec % 60; return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0'); };
+const strengthFor = n => STRENGTH[(n - 1) % STRENGTH.length];
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const swingsDoneInCurrent = () => state.current ? STEPS.slice(0, state.current.step).reduce((a, s) => a + s.swings, 0) : 0;
+function elapsed() {
+  const c = state.current; if (!c) return 0;
+  return c.elapsed + (c.runningSince ? (Date.now() - c.runningSince) / 1000 : 0);
+}
+
+// ===== 畫面 =====
+function render() {
+  const done = state.sessions.length;
+  const total = done * SWINGS_PER_SESSION + swingsDoneInCurrent();
+  $('total').textContent = total.toLocaleString();
+  $('pct').textContent = (total / 100).toFixed(1) + '%';
+  $('bar').style.width = Math.min(100, total / 100) + '%';
+  $('sessionsText').textContent = `已完成 ${done} / ${TOTAL_SESSIONS} 次`;
+  $('kgText').textContent = `總負重 ${(total * SWING_KG).toLocaleString()} kg`;
+  $('dots').innerHTML = Array.from({ length: TOTAL_SESSIONS }, (_, i) =>
+    `<div class="dot ${i < done ? 'done' : ''}">${i + 1}</div>`).join('');
+
+  const allDone = done >= TOTAL_SESSIONS;
+  const c = state.current;
+  $('startCard').classList.toggle('hidden', !!c || allDone);
+  $('workCard').classList.toggle('hidden', !c || c.step >= STEPS.length);
+  $('finishCard').classList.toggle('hidden', !c || c.step < STEPS.length);
+
+  if (allDone && !c) {
+    $('startCard').classList.add('hidden');
+  }
+  const next = done + 1;
+  $('nextNo').textContent = next;
+  const st = strengthFor(next);
+  $('nextStrength').textContent = st.name;
+
+  if (c && c.step < STEPS.length) {
+    const s = STEPS[c.step], cst = strengthFor(c.no);
+    $('workTitle').textContent = `第 ${c.no} 次・第 ${s.round} 輪`;
+    $('workCount').textContent = `本次 ${swingsDoneInCurrent()} / 500`;
+    $('rounds').innerHTML = Array.from({ length: ROUNDS }, (_, i) => `<span class="${i < s.round ? 'on' : ''}"></span>`).join('');
+    $('stepLabel').textContent = `步驟 ${s.idx} / 4`;
+    $('stepSwing').textContent = `擺盪 ${s.swings} 下`;
+    $('stepAfter').innerHTML = s.reps
+      ? `接著 <span class="strength">${cst.name} ${cst.unit}${s.reps} 下</span>`
+      : `接著 <span class="rest">休息</span>`;
+    $('pauseBtn').textContent = c.runningSince ? '暫停' : '繼續';
+    $('undoBtn').disabled = c.step === 0;
+  }
+  if (c && c.step >= STEPS.length) {
+    $('finishInfo').textContent = `第 ${c.no} 次・用時 ${fmt(c.elapsed)}・肌力：${strengthFor(c.no).name}`;
+  }
+
+  // 紀錄表
+  $('logBody').innerHTML = state.sessions.length
+    ? state.sessions.map(s => `<tr><td>${s.no}</td><td>${s.date.slice(5)}</td><td>${s.strength.split(' ')[0]}</td><td>${fmt(s.seconds)}</td></tr>`
+        + (s.note ? `<tr><td></td><td colspan="3" class="muted">${escapeHtml(s.note)}</td></tr>` : '')).join('')
+    : `<tr><td colspan="4" class="muted">還沒有紀錄</td></tr>`;
+  const times = state.sessions.map(s => s.seconds);
+  $('avgText').textContent = times.length
+    ? `平均 ${fmt(times.reduce((a, b) => a + b, 0) / times.length)}・最快 ${fmt(Math.min(...times))}` : '';
+}
+function escapeHtml(t) { return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+function tick() { if (state.current && state.current.step < STEPS.length) $('timer').textContent = fmt(elapsed()); }
+setInterval(tick, 500);
+
+// ===== 螢幕常亮（支援的瀏覽器才有用）=====
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && 'wakeLock' in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+    if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) { wakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.current && state.current.runningSince) { wakeLock = null; keepAwake(true); }
+});
+
+// ===== 按鈕 =====
+$('startBtn').onclick = () => {
+  state.current = { no: state.sessions.length + 1, step: 0, elapsed: 0, runningSince: Date.now(), date: today() };
+  save(); keepAwake(true); render(); tick();
+};
+$('doneStepBtn').onclick = () => {
+  const c = state.current; if (!c) return;
+  if (!c.runningSince) c.runningSince = Date.now();
+  c.step++;
+  if (c.step >= STEPS.length) { c.elapsed = elapsed(); c.runningSince = null; keepAwake(false); }
+  if (navigator.vibrate) navigator.vibrate(40);
+  save(); render(); tick();
+};
+$('undoBtn').onclick = () => { const c = state.current; if (c && c.step > 0) { c.step--; save(); render(); } };
+$('pauseBtn').onclick = () => {
+  const c = state.current; if (!c) return;
+  if (c.runningSince) { c.elapsed = elapsed(); c.runningSince = null; keepAwake(false); }
+  else { c.runningSince = Date.now(); keepAwake(true); }
+  save(); render(); tick();
+};
+$('quitBtn').onclick = () => {
+  if (!confirm('放棄這次訓練？這次做的次數不會記錄。')) return;
+  state.current = null; keepAwake(false); save(); render();
+};
+$('saveBtn').onclick = () => {
+  const c = state.current; if (!c) return;
+  state.sessions.push({ no: c.no, date: c.date, seconds: Math.round(c.elapsed), swings: SWINGS_PER_SESSION,
+    kg: SWING_KG, strength: strengthFor(c.no).name, note: $('note').value.trim() });
+  state.current = null; $('note').value = ''; save(); render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+$('delLastBtn').onclick = () => {
+  const last = state.sessions[state.sessions.length - 1];
+  if (!last) return;
+  if (!confirm(`刪除第 ${last.no} 次（${last.date}）的紀錄？`)) return;
+  state.sessions.pop(); save(); render();
+};
+$('csvBtn').onclick = () => {
+  if (!state.sessions.length) { alert('還沒有紀錄可以匯出'); return; }
+  const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+  const rows = [['次數', '日期', '擺盪下數', '壺鈴kg', '肌力動作', '用時(秒)', '用時', '備註']]
+    .concat(state.sessions.map(s => [s.no, s.date, s.swings, s.kg, s.strength, s.seconds, fmt(s.seconds), s.note]));
+  const csv = '﻿' + rows.map(r => r.map(q).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `kettlebell-10k-${today()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+};
+
+if (state.current && state.current.runningSince) keepAwake(true);
+render(); tick();
+</script>
+</body>
+</html>
